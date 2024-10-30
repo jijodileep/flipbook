@@ -1,0 +1,57 @@
+<?php 
+require 'vendor/autoload.php';
+Flight::route('/', function () {
+    echo 'Invalid Route';
+    //echo date('Y-m-d');
+});
+
+Flight::route('/register/@uuid', function ($uuid) {
+    require 'config.php';
+    $db->where("MainId", $uuid);
+    $db->join("WebLinks u", "p.WebLinkId=u.Id", "LEFT");
+    $dailyentrycampaigns = $db->getOne("DailyEntryCampaigns p");   
+    include 'views/register.php';
+});
+function guid()
+{
+    if (function_exists('com_create_guid') === true)
+        return trim(com_create_guid(), '{}');
+
+    $data = openssl_random_pseudo_bytes(16);
+    $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+    $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+Flight::route('/savedata/@uuid', function ($uuid) {
+    require 'config.php';
+    $db->where("MainId", $uuid);
+    $dailyentrycampaigns = $db->getOne("DailyEntryCampaigns");
+    $data = [];
+    $data['Day'] = date('Y-m-d');
+    $data['Name'] =  $_POST['name'];
+    $data['Phone'] =  $_POST['phone'];
+    $data['Email'] =  $_POST['email'];
+    $data['DepartmentId'] =    $dailyentrycampaigns['DepartmentId'];
+    $data['QueryId'] =    $dailyentrycampaigns['QueryId'];
+    $data['StatusId'] =    $dailyentrycampaigns['StatusId'];
+    $data['CampaignId'] =    $dailyentrycampaigns['CampaignId'];
+    $data['CampaignSourceId'] =    $dailyentrycampaigns['CampaignSourceId'];
+    $data['Remarks'] =    'From Campaign Register -'.$dailyentrycampaigns['Name'];
+    $data['CreatedDate'] =    date('Y-m-d H:i:s');
+    $data['UpdatedDate'] =    date('Y-m-d H:i:s');
+    $data['BranchId'] =    $dailyentrycampaigns['BranchId'];
+    $data['UserId'] =   1;
+    $data['IsCallCenter'] =   0;
+    $data['IsChatCenter'] =   0;
+    $data['IsDeleted'] =   0;
+    $data['IsVisited'] =   0; 
+    $data['DoctorId'] =    $dailyentrycampaigns['DoctorId'];
+    $data['DailyEntryCampaignId'] =    $dailyentrycampaigns['Id'];
+    
+    $insert_id = $db->insert('DailyEntry', $data);
+
+    header("Access-Control-Allow-Origin: *");
+    header("Content-type: text/json");
+    ob_start('ob_gzhandler');
+    echo json_encode($insert_id);
+});
